@@ -1,6 +1,7 @@
 from bplist.bplist import BPListReader
 from PIL import Image
 from ipdb import set_trace as bp
+import struct
 
 filename = 'AppleName.strings'
 directory = '/System/Library/PrivateFrameworks/CoreEmoji.framework/Versions/A/Resources/en.lproj/'
@@ -19,19 +20,24 @@ with open('/System/Library/Fonts/Apple Color Emoji.ttc', 'rb') as ttf:
         if byte == png_seq:
             current_png = byte
             print('found png')
-        if current_png:
-            current_png += byte
-            print('found more bytes')
         if byte[:4] == end_seq:
-            current_png += byte
+            current_png += byte[-1]
             with open('test.png', 'wb') as png_file:
                 png_file.write(current_png)
-            bp()
             print('wrote file')
             import os
             os._exit(0)
-        pos += 1
-        ttf.seek(pos)
+
+
+        if current_png:
+            lenword = ttf.read(4)
+            length = struct.unpack('>hh', lenword)[1]
+            typ = ttf.read(4)
+            data = ttf.read(length) if length > 0 else ''
+            crc = ttf.read(4)
+            current_png += byte[-1]
+            print('found more bytes')
+
         byte = byte[1:]
         byte += ttf.read(1)
 
