@@ -1,9 +1,13 @@
 from bplist.bplist import BPListReader
 from PIL import Image
+import re
 from ipdb import set_trace as bp
 import struct
 import os
 from io import BytesIO
+from fontTools.ttLib import TTFont
+from fontTools.misc.xmlWriter import XMLWriter
+from xml.etree import ElementTree
 
 filename = 'AppleName.strings'
 directory = '/System/Library/PrivateFrameworks/CoreEmoji.framework/Versions/A/Resources/en.lproj/'
@@ -57,9 +61,41 @@ def extract_pngs_from_ttf():
 
                 print('found more bytes', length, typ, ttf.tell())
 
+def write_sbix_to_file():
+    with open('out.xml', 'wb') as fx:
+        mx = XMLWriter(fx)
+
+        font = TTFont('Apple Color Emoji.ttc', fontNumber=1)
+        bix = font['sbix']
+        bix.toXML(xmlWriter=mx, ttFont=font)
+
+
 with open(directory + filename, 'rb') as fp:
     reader = BPListReader(fp.read())
     parsed = reader.parse()
-    bp()
-    with open(filename + '_decoded.txt', 'w') as decoded:
-        decoded.writelines(map(lambda x: x.encode('utf8'), parsed.keys()))
+
+sbix_table = ElementTree.parse('out.xml')
+strikes = sbix_table.findall('strike')
+
+for strike in strikes:
+
+    for glyph in strike:
+
+        name = glyph.attrib.get('name')
+        if name:
+            print name
+        png_hexdata = glyph.find('hexdata')
+        if png_hexdata is None:
+            continue
+        png_data = re.sub('[\\n\s]', '', png_hexdata.text).decode('hex')
+        png_image = Image.open(BytesIO(png_data))
+        hex_code = name.split('_')[-1]
+        bp()
+        image_filename = "{}_{}x{}.png".format(
+            hex_code,
+            png_image.size[0], 
+            png_image.size[1]
+        )
+        png_image.save(os.path.join('./images/', image_filename))
+        print('saved {}'.format(image_filename))
+
