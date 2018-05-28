@@ -10,23 +10,51 @@ from fontTools.misc.xmlWriter import XMLWriter
 from xml.etree import ElementTree
 from argparse import ArgumentParser
 
-filename = 'AppleName.strings'
-directory = '/System/Library/PrivateFrameworks/CoreEmoji.framework/Versions/A/Resources/en.lproj/'
+import codecs
 
-def write_sbix_to_file():
-    with open('out.xml', 'wb') as fx:
+
+def exit():
+    os._exit(0)
+
+def write_sbix_to_file(filename):
+
+    out_filename = filename.replace(' ', '_') + '.xml'
+
+    if os.path.exists(out_filename):
+        print('%s already exists. not extracting' % out_filename)
+        return out_filename
+
+    print('extracting sbix chunk to file %s' % out_filename)
+
+    with open(out_filename, 'wb') as fx:
         mx = XMLWriter(fx)
+        mx.begintag("root")
 
-        font = TTFont('Apple Color Emoji.ttc', fontNumber=1)
+        font = TTFont(filename, fontNumber=1)
         bix = font['sbix']
         bix.toXML(xmlWriter=mx, ttFont=font)
+        mx.endtag("root")
+        mx.close()
+    return out_filename
 
 
 def get_parsed_strings():
+
+    filename = 'AppleName.strings'
+    directory = '/System/Library/PrivateFrameworks/CoreEmoji.framework/Versions/A/Resources/en.lproj/'
+
     with open(directory + filename, 'rb') as fp:
         reader = BPListReader(fp.read())
         parsed = reader.parse()
-    return parsed
+
+    new_parsed = parsed.copy()
+    for key in parsed:
+        if u'\ufe0f' in key or u'\u20E3' in key:
+            graphical_key = key.replace(u'\ufe0f', u'').replace(u'\u20E3', u'')
+            new_parsed[graphical_key] = parsed[key]
+
+
+    return new_parsed
 
 def extract_strikes_from_file(filename):
     sbix_table = ElementTree.parse(filename)
@@ -41,27 +69,85 @@ def extract_pngs_from_sbix_xml_file(filename):
 
     strikes = extract_strikes_from_file(filename)
 
+    created_dirs_for_sizes = []
+
+    count = 0
+    hit_count = 0
+
     for strike in strikes:
 
         for glyph in strike:
-
+            count += 1
+            gender = None
+            skin_tone = None
             name = glyph.attrib.get('name')
-            if name:
-                print name
+
             png_hexdata = glyph.find('hexdata')
             if png_hexdata is None:
                 continue
             png_data = re.sub('[\\n\s]', '', png_hexdata.text).decode('hex')
             png_image = Image.open(BytesIO(png_data))
-            hex_code = name.split('_')[-1]
-            bp()
-            image_filename = "{}_{}x{}.png".format(
-                hex_code,
+            hex_code = name.split('_')[-1].replace('u', '').split('.')
+            if '_' in name:
+                try:
+                    code1, code2 = name.replace('u', '').split('_')
+                except:
+                    pass
+
+            if len(hex_code) > 1:
+                print(hex_code)
+                skin_tone = hex_code[1]
+                if len(hex_code) == 3:
+                    gender = hex_code[2]
+
+                hex_code = hex_code[0]
+            else:
+                hex_code = hex_code[0]
+
+
+            try:
+                number = int(hex_code, 16)
+            except ValueError:
+                continue
+
+            string = '\\U{:0>8X}'.format(number)
+            decoded = codecs.decode(string,'unicode-escape')
+            name = number
+
+            try:
+                name = names[decoded].replace('/', ' ')
+                hit_count += 1
+                print('decoded', decoded, name)
+                #print(name)
+            except KeyError:
+                print('nothing found for ' + string)
+                name = glyph.attrib.get('name')
+                print(decoded)
+
+            image_dir = os.path.join('./images', "{}x{}".format(
                 png_image.size[0], 
                 png_image.size[1]
-            )
-            png_image.save(os.path.join('./images/', image_filename))
-            print('saved {}'.format(image_filename))
+            ))
+            if image_dir not in created_dirs_for_sizes:
+                created_dirs_for_sizes += image_dir
+                if os.path.exists(image_dir) == False:
+                    os.mkdir(image_dir)
+                    created_dirs_for_sizes += image_dir
+
+            image_filename = name 
+
+            if gender:
+                image_filename += u' {} '.format(gender.lower())
+            if skin_tone:
+                image_filename += u' {} '.format(skin_tone)
+
+            image_filename += u'.png'
+                
+
+            png_image.save(os.path.join(image_dir, image_filename))
+            print(u'saved {}'.format(image_filename))
+
+    print(count, hit_count, hit_count/count)
 
 if __name__ == '__main__':
 
@@ -70,5 +156,8 @@ if __name__ == '__main__':
 
         args = parser.parse_args()
 
-        extract_strikes_from_file(args.ttc_file, "")
+        sbix = write_sbix_to_file(args.ttc_file)
+        extract_pngs_from_sbix_xml_file(sbix)
+        #strikes = extract_strikes_from_file(args.ttc_file)
+        parsed = get_parsed_strings()
 
