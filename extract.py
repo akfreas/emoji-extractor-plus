@@ -49,9 +49,8 @@ def get_parsed_strings():
 
     new_parsed = parsed.copy()
     for key in parsed:
-        if u'\ufe0f' in key or u'\u20E3' in key:
-            graphical_key = key.replace(u'\ufe0f', u'').replace(u'\u20E3', u'')
-            new_parsed[graphical_key] = parsed[key]
+        graphical_key = key.replace(u'\ufe0f', u'').replace(u'\u20E3', u'').replace(u'\u200d', '')
+        new_parsed[graphical_key] = parsed[key]
 
 
     return new_parsed
@@ -62,6 +61,12 @@ def extract_strikes_from_file(filename):
     return strikes
 
 
+def escaped_string_from_string(string):
+    
+    hex_code = string.replace('u', '')
+    number = int(hex_code, 16)
+    return '\\U{:0>8X}'.format(number)
+
 def extract_pngs_from_sbix_xml_file(filename):
 
     
@@ -71,58 +76,52 @@ def extract_pngs_from_sbix_xml_file(filename):
 
     created_dirs_for_sizes = []
 
-    count = 0
-    hit_count = 0
+    modifier_matcher = re.compile(r'\.(?P<skin_tone>[0-5]{0,1})?\.?(?P<gender>[MWBG]{0,4})?')
+    matcher = re.compile(r'([A-F0-9]{4,8})')
 
     for strike in strikes:
 
         for glyph in strike:
-            count += 1
             gender = None
             skin_tone = None
-            name = glyph.attrib.get('name')
+            glyph_codes = glyph.attrib.get('name')
 
             png_hexdata = glyph.find('hexdata')
             if png_hexdata is None:
                 continue
             png_data = re.sub('[\\n\s]', '', png_hexdata.text).decode('hex')
             png_image = Image.open(BytesIO(png_data))
-            hex_code = name.split('_')[-1].replace('u', '').split('.')
-            if '_' in name:
-                try:
-                    code1, code2 = name.replace('u', '').split('_')
-                except:
-                    pass
-
-            if len(hex_code) > 1:
-                print(hex_code)
-                skin_tone = hex_code[1]
-                if len(hex_code) == 3:
-                    gender = hex_code[2]
-
-                hex_code = hex_code[0]
-            else:
-                hex_code = hex_code[0]
-
-
-            try:
-                number = int(hex_code, 16)
-            except ValueError:
+            modifiers = modifier_matcher.search(glyph_codes)
+            codes = matcher.findall(glyph_codes)
+            if codes is None:
                 continue
+            if modifiers is not None:
+                mod_dict = modifiers.groupdict()
+                gender = mod_dict['gender']
+                skin_tone = mod_dict['skin_tone']
 
-            string = '\\U{:0>8X}'.format(number)
-            decoded = codecs.decode(string,'unicode-escape')
-            name = number
+            key_string = u''
+            for code in codes:
+                if u'fe0f' in code or u'20E3' in code:
+                    continue
+                key_string += escaped_string_from_string(code)
+            
+            decoded = codecs.decode(key_string,'unicode-escape')
+
+            if gender == 'W':
+                decoded += u'\u2640'
+                gender = None
+            elif gender == 'M':
+                decoded += u'\u2642'
+                gender = None
+
+
 
             try:
                 name = names[decoded].replace('/', ' ')
-                hit_count += 1
-                print('decoded', decoded, name)
-                #print(name)
             except KeyError:
-                print('nothing found for ' + string)
+                print(u'no name found for {} ({})'.format(decoded, key_string))
                 name = glyph.attrib.get('name')
-                print(decoded)
 
             image_dir = os.path.join('./images', "{}x{}".format(
                 png_image.size[0], 
@@ -137,17 +136,15 @@ def extract_pngs_from_sbix_xml_file(filename):
             image_filename = name 
 
             if gender:
-                image_filename += u' {} '.format(gender.lower())
+                image_filename += u' {}'.format(gender.lower())
             if skin_tone:
-                image_filename += u' {} '.format(skin_tone)
+                image_filename += u' {}'.format(skin_tone)
 
             image_filename += u'.png'
                 
 
             png_image.save(os.path.join(image_dir, image_filename))
-            print(u'saved {}'.format(image_filename))
-
-    print(count, hit_count, hit_count/count)
+            print(u'saved {}/{}'.format(image_dir, image_filename))
 
 if __name__ == '__main__':
 
