@@ -12,10 +12,6 @@ from argparse import ArgumentParser
 
 import codecs
 
-
-def exit():
-    os._exit(0)
-
 def write_sbix_to_file(filename):
 
     out_filename = filename.replace(' ', '_') + '.xml'
@@ -155,6 +151,4 @@ if __name__ == '__main__':
 
         sbix = write_sbix_to_file(args.ttc_file)
         extract_pngs_from_sbix_xml_file(sbix)
-        #strikes = extract_strikes_from_file(args.ttc_file)
-        parsed = get_parsed_strings()
 
