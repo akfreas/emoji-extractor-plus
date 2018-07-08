@@ -1,7 +1,6 @@
 from bplist.bplist import BPListReader
 from PIL import Image
 import re
-from ipdb import set_trace as bp
 import struct
 import os
 from io import BytesIO
@@ -14,7 +13,9 @@ import codecs
 
 def write_sbix_to_file(filename):
 
-    out_filename = filename.replace(' ', '_') + '.xml'
+    basename = os.path.basename(filename)
+    xml_filename = basename + '.xml'
+    out_filename = os.path.join(os.getcwd(), xml_filename)
 
     if os.path.exists(out_filename):
         print('%s already exists. not extracting' % out_filename)
@@ -145,10 +146,16 @@ def extract_pngs_from_sbix_xml_file(filename):
 if __name__ == '__main__':
 
         parser = ArgumentParser(description='Extract PNG elements from TTF')
-        parser.add_argument('-f','--ttc_file', help='ttc file', required=True)
+        parser.add_argument('-f','--ttc_file', help='ttc file', required=False)
 
         args = parser.parse_args()
+        ttc_file = args.ttc_file
+        parsed = get_parsed_strings()
 
-        sbix = write_sbix_to_file(args.ttc_file)
+        if ttc_file is None:
+            ttc_file = '/System/Library/Fonts/Apple Color Emoji.ttc'
+
+        sbix = write_sbix_to_file(ttc_file)
+
         extract_pngs_from_sbix_xml_file(sbix)
-
+        
