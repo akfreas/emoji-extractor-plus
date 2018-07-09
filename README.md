@@ -14,6 +14,9 @@ This will extract the PNGs from the font file at `/System/Library/Fonts/Apple Co
 
 The script will save the PNG data from the font into the `./images` directory wherever you ran the script. All the emojis will be labeled with their proper names, too!
 
+![](https://s3.amazonaws.com/sashimiblade.com/emoji-files.png "")
+
+
 
 # Fun Info
 
