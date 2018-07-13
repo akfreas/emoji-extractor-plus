@@ -127,7 +127,7 @@ def extract_pngs_from_sbix_xml_file(filename):
             if image_dir not in created_dirs_for_sizes:
                 created_dirs_for_sizes += image_dir
                 if os.path.exists(image_dir) == False:
-                    os.mkdir(image_dir)
+                    os.makedirs(image_dir)
                     created_dirs_for_sizes += image_dir
 
             image_filename = name 
