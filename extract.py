@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from bplist.bplist import BPListReader
 from PIL import Image
 import re
