@@ -49,7 +49,10 @@ def get_parsed_strings():
     new_parsed = parsed.copy()
     for key in parsed:
         graphical_key = key.replace(u'\ufe0f', u'').replace(u'\u20E3', u'').replace(u'\u200d', '')
-        new_parsed[graphical_key] = parsed[key]
+        value = parsed[key]
+        if type(value) is bytes:
+           value = value.decode() 
+        new_parsed[graphical_key] = value
 
 
     return new_parsed
@@ -88,7 +91,8 @@ def extract_pngs_from_sbix_xml_file(filename):
             png_hexdata = glyph.find('hexdata')
             if png_hexdata is None:
                 continue
-            png_data = re.sub('[\\n\s]', '', png_hexdata.text).decode('hex')
+            filtered_text = re.sub('[\\n\s]', '', png_hexdata.text)
+            png_data = bytearray.fromhex(filtered_text)
             png_image = Image.open(BytesIO(png_data))
             modifiers = modifier_matcher.search(glyph_codes)
             codes = matcher.findall(glyph_codes)
@@ -132,7 +136,7 @@ def extract_pngs_from_sbix_xml_file(filename):
                     os.makedirs(image_dir)
                     created_dirs_for_sizes += image_dir
 
-            image_filename = name 
+            image_filename = name
 
             if gender:
                 image_filename += u' {}'.format(gender.lower())
