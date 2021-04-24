@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 from bplist.bplist import BPListReader
 from PIL import Image
