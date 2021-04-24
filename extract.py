@@ -123,8 +123,12 @@ def extract_pngs_from_sbix_xml_file(filename):
             try:
                 name = names[decoded].replace('/', ' ')
             except KeyError:
-                print(u'no name found for {} ({})'.format(decoded, key_string))
+
                 name = glyph.attrib.get('name')
+                print("""\
+No name found for {decoded} ({key_string}). This is likely a modifier emoji, it will still be saved with the filename {name}.png
+Try going to https://graphemica.com/{decoded} to find out more.\
+                """.format(decoded=decoded, key_string=key_string, name=name))
 
             image_dir = os.path.join('./images', "{}x{}".format(
                 png_image.size[0], 
