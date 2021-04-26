@@ -7,22 +7,22 @@ Everyone 💕s Emojis. Problem is, it's hard to use them in Photoshop or in Goog
 
 * Clone this repo
 * If you're using [virtualenv](https://virtualenv.pypa.io/en/stable/), make a new env
-* Run `pip install -r requirements.pip`
-* Run `python extract.py`
+* Run `python3 -m pip install -r requirements.pip`
+* Run `python3 extract.py`
 
 This will extract the PNGs from the font file at `/System/Library/Fonts/Apple Color Emoji.ttc`. If you want to target another font file, just use the `--ttc_file` flag with the path to the file.
 
 The script will save the PNG data from the font into the `./images` directory wherever you ran the script. The following resolutions are curretly extracted:
 
-160x160
-96x96
-64x64
-52x52
-48x48
-40x40
-32x32
-26x26
-20x20
+* 160x160
+* 96x96
+* 64x64
+* 52x52
+* 48x48
+* 40x40
+* 32x32
+* 26x26
+* 20x20
 
 All the emojis will be labeled with their proper names, too! 
 
